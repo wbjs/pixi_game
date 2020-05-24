@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="../pixi.min.js"></script>
+    <script src="../bump.js"></script>
+    <script src="../jquery-3.5.1.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        .box {
+            margin: 0 auto;
+            width: 500px;
+            height: 500px;
+            position: relative;
+            text-align: center;
+        }
+        #gameover{
+            display: none;
+        }
+        .flex{
+            position: absolute;
+            width:100%;
+            height: 100%;
+            display: flex;
+            flex-flow: column;
+            justify-content: center;
+        }
+        h1{
+            color:#fff;
+        }
+        button{
+            width:200px;
+            height:40px;
+            border-radius: 10px;
+            margin:10px auto;
+        }
+    </style>
+</head>
+<body onload="init();">
+    <div id="box" class="box">
+        <div id="gameover">
+            <div class="flex">
+                <h1>GAME OVER</h1>
+                <button id="restart">restart</button>
+            </div>
+        </div>
+    </div>
+</body>
+    <script type="text/javascript">
+        function keyboard(keyCode) {
+            let key = {};
+            key.code = keyCode;
+            key.isDown = false;
+            key.isUp = true;
+            key.press = undefined;
+            key.release = undefined;
+            //The `downHandler`
+            key.downHandler = event => {
+                if (event.keyCode === key.code) {
+                    if (key.isUp && key.press) key.press();
+                    key.isDown = true;
+                    key.isUp = false;
+                }
+                event.preventDefault();
+            };
+            //The `upHandler`
+            key.upHandler = event => {
+                if (event.keyCode === key.code) {
+                    if (key.isDown && key.release) key.release();
+                    key.isDown = false;
+                    key.isUp = true;
+                }
+                event.preventDefault();
+            };
+            //Attach event listeners
+            window.addEventListener(
+                "keydown", key.downHandler.bind(key), false
+            );
+            window.addEventListener(
+                "keyup", key.upHandler.bind(key), false
+            );
+            return key;
+        }
+        function init() {
+            let type = "WebGL"
+            if (!PIXI.utils.isWebGLSupported()) {
+                type = "canvas"
+            }
+            
+            //碰撞检测的
+            b = new Bump(PIXI);
+            
+            PIXI.utils.sayHello(type);
+            app = new PIXI.Application({
+                width: 500,         // default: 800
+                height: 500,        // default: 600
+                antialias: true,    // default: false
+                transparent: false, // default: false
+                resolution: 1       // default: 1
+            });
+            app.renderer.backgroundColor = 0x061639;
+            document.getElementById('box').appendChild(app.view);
+            PIXI.loader
+                .add([
+                    "../images/player.png",
+                    "../images/flyobj.png"
+                ])
+                .on("progress", loadProgressHandler)
+                .load(setup);
+            function loadProgressHandler(loader, resource) {
+                console.log("loading: " + resource.url);
+                console.log("progress: " + loader.progress + "%");
+            }
+            function setup() {
+                console.log("All files loaded");
+                var playerTexture = PIXI.Texture.from("../images/player.png");                
+                player = new PIXI.Sprite(playerTexture);
+                player.circular = true;
+                player.width = 50;
+                player.height = 70;
+                player.position.x = 512 / 2;
+                player.position.y = 512 / 2;
+                player.vx = 0;
+                player.vy = 0;
+                
+                
+                //敌机资源
+                flyobjTexture = PIXI.Texture.from("../images/flyobj.png");
+                //敌机数组
+                flyobjs = new PIXI.Container();
+                app.stage.addChild(flyobjs);
+                
+                app.stage.addChild(player);
+                //键盘事件
+                var left = keyboard(37);
+                var up = keyboard(38);
+                var right = keyboard(39);
+                var down = keyboard(40);
+                left.press = () => {
+                    player.vx = -4;
+                    player.vy = 0;
+                };
+                left.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+
+                right.press = () => {
+                    player.vx = 4;
+                    player.vy = 0;
+                };
+                right.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+
+                up.press = () => {
+                    player.vx = 0;
+                    player.vy = -4;
+                };
+                up.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+
+                down.press = () => {
+                    player.vx = 0;
+                    player.vy = 4;
+                };
+                down.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+                
+                restart();
+                
+                requestAnimationFrame(update);
+            }
+            
+            function r(min, max) {
+                return Math.floor(Math.random() * (max - min)) + min
+            }
+            
+            function gameover(){
+                $('#gameover').show();
+            }
+            
+            function restart(){
+                //创建敌机的time
+                create_flyobj_time=0;
+                //loop 控制游戏是否进行的全局
+                loop=true;
+                player.position.x=500/2-player.width/2;
+                player.position.y=500-player.height;
+                flyobjs.children=[];
+                loop=true;
+                $('#gameover').hide();
+            }
+            
+            function update() {
+                if(loop){
+                    player.position.x += player.vx;
+                    player.position.y += player.vy;
+
+                    //避免超出画布
+                    if(player.position.x<=0){
+                       player.position.x=0;
+                    }
+                    if(player.position.x>=500-player.width){
+                       player.position.x=500-player.width;
+                    }
+                    if(player.position.y<=0){
+                       player.position.y=0;
+                    }
+                    if(player.position.y>=500-player.height){
+                       player.position.y=500-player.height;
+                    }
+
+                    //遍历敌机
+                    flyobjs.children.forEach(obj => {
+                        obj.position.y += 2;
+                        if (obj.position >= 500) {
+                            flyobjs.removeChild(objs);
+                        }
+                        //碰撞检测
+                        if (b.hitTestCircle(obj, player, true)) {
+                            setTimeout(() => {
+                                loop = false;
+                                gameover();
+                            }, 100);
+                        }
+                    });
+
+                    //每隔一段时间，增加一个敌机
+                    create_flyobj_time++;
+                    if (create_flyobj_time >= 100) {
+                        console.log('new fly obj');
+                        flyobj = new PIXI.Sprite(flyobjTexture);
+                        flyobj.width = 50;
+                        flyobj.height = 50;
+                        flyobj.position.x = r(0, 512);
+                        flyobj.position.y = 0;
+                        flyobj.circular = true;
+                        flyobjs.addChild(flyobj);
+                        create_flyobj_time = 0;
+                    }
+                }
+                
+                requestAnimationFrame(update);
+            }
+            
+            
+            //
+            $('#restart').click(function(){
+                restart();
+            });
+        }
+    </script>
+</html>

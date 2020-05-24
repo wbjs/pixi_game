@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="../pixi.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        .box {
+            margin: 0 auto;
+            width: 500px;
+            height: 500px;
+        }
+    </style>
+</head>
+<body onload="init();">
+    <div id="box" class="box"></div>
+</body>
+    <script type="text/javascript">
+        function keyboard(keyCode) {
+            let key = {};
+            key.code = keyCode;
+            key.isDown = false;
+            key.isUp = true;
+            key.press = undefined;
+            key.release = undefined;
+            //The `downHandler`
+            key.downHandler = event => {
+                if (event.keyCode === key.code) {
+                    if (key.isUp && key.press) key.press();
+                    key.isDown = true;
+                    key.isUp = false;
+                }
+                event.preventDefault();
+            };
+            //The `upHandler`
+            key.upHandler = event => {
+                if (event.keyCode === key.code) {
+                    if (key.isDown && key.release) key.release();
+                    key.isDown = false;
+                    key.isUp = true;
+                }
+                event.preventDefault();
+            };
+            //Attach event listeners
+            window.addEventListener(
+                "keydown", key.downHandler.bind(key), false
+            );
+            window.addEventListener(
+                "keyup", key.upHandler.bind(key), false
+            );
+            return key;
+        }
+        function init() {
+            let type = "WebGL"
+            if (!PIXI.utils.isWebGLSupported()) {
+                type = "canvas"
+            }
+            PIXI.utils.sayHello(type);
+            app = new PIXI.Application({
+                width: 500,         // default: 800
+                height: 500,        // default: 600
+                antialias: true,    // default: false
+                transparent: false, // default: false
+                resolution: 1       // default: 1
+            });
+            app.renderer.backgroundColor = 0x061639;
+            document.getElementById('box').appendChild(app.view);
+            PIXI.loader
+                .add([
+                    "../images/player.png"
+                ])
+                .on("progress", loadProgressHandler)
+                .load(setup);
+            function loadProgressHandler(loader, resource) {
+                console.log("loading: " + resource.url);
+                console.log("progress: " + loader.progress + "%");
+            }
+            function setup() {
+                console.log("All files loaded");
+                var playerTexture = PIXI.Texture.from("../images/player.png");
+                player = new PIXI.Sprite(playerTexture);
+                player.circular = true;
+                player.width = 50;
+                player.height = 70;
+                player.position.x = 512 / 2;
+                player.position.y = 512 / 2;
+                player.vx = 0;
+                player.vy = 0;
+                app.stage.addChild(player);
+                //键盘事件
+                var left = keyboard(37);
+                var up = keyboard(38);
+                var right = keyboard(39);
+                var down = keyboard(40);
+                left.press = () => {
+                    player.vx = -2;
+                    player.vy = 0;
+                };
+                left.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+
+                right.press = () => {
+                    player.vx = 2;
+                    player.vy = 0;
+                };
+                right.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+
+                up.press = () => {
+                    player.vx = 0;
+                    player.vy = -2;
+                };
+                up.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+
+                down.press = () => {
+                    player.vx = 0;
+                    player.vy = 2;
+                };
+                down.release = () => {
+                    player.vx = 0;
+                    player.vy = 0;
+                };
+                requestAnimationFrame(update);
+            }
+            function update() {
+                player.position.x += player.vx;
+                player.position.y += player.vy;
+                requestAnimationFrame(update);
+            }
+        }
+    </script>
+</html>
